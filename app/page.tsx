@@ -1,4 +1,4 @@
-'use client';
+ 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
@@ -9,7 +9,7 @@ export default function Home() {
   const [maxScore, setMaxScore] = useState(80);
 
   useEffect(() => {
-    fetch('/api/games').then(r => r.json()).then(setGames);
+    fetch('/api/games').then(r => r.json()).then(setGames).catch(() => setGames([]));
   }, []);
 
   const createGame = async () => {
@@ -19,23 +19,44 @@ export default function Home() {
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Indian Rummy Tracker</h1>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <section className="lg:col-span-2">
+        <div className="card p-6">
+          <h1 className="text-2xl font-extrabold mb-2">Indian Rummy Tracker</h1>
+          <p className="muted mb-4">Track scores, rounds and quickly add new games. Minimal, distraction-free UI.</p>
 
-      <div className="mb-6">
-        <h2 className="text-lg font-semibold mb-2">Create a New Game</h2>
-        <input className="border p-2 mr-2" placeholder="Game Name" value={name} onChange={e => setName(e.target.value)} />
-        <input className="border p-2 mr-2" placeholder="Players (comma separated)" value={players} onChange={e => setPlayers(e.target.value)} />
-        <input className="border p-2 w-24 mr-2" type="number" value={maxScore} onChange={e => setMaxScore(Number(e.target.value))} />
-        <button className="bg-green-600 text-white px-4 py-2 rounded" onClick={createGame}>Start Game</button>
-      </div>
+          <div className="mt-4">
+            <h2 className="text-lg font-semibold mb-3">Recent Games</h2>
+            {games.length === 0 ? (
+              <div className="p-4 muted">No recent games. Create one to get started.</div>
+            ) : (
+              <ul className="divide-y">
+                {games.map(g => (
+                  <li key={g} className="py-3">
+                    <Link href={`/game/${g}`} className="text-accent font-medium">{g}</Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </section>
 
-      <h2 className="text-lg font-semibold mb-2">Recent Games</h2>
-      <ul className="list-disc pl-6">
-        {games.map(g => (
-          <li key={g}><Link href={`/game/${g}`} className="text-blue-600">{g}</Link></li>
-        ))}
-      </ul>
+      <aside>
+        <div className="card p-6">
+          <h3 className="text-lg font-semibold mb-3">Create New Game</h3>
+          <label className="block text-sm text-muted mb-1">Game name</label>
+          <input className="w-full border p-2 rounded mb-3" placeholder="e.g. Friday Night" value={name} onChange={e => setName(e.target.value)} />
+
+          <label className="block text-sm text-muted mb-1">Players (comma separated)</label>
+          <input className="w-full border p-2 rounded mb-3" placeholder="Alice, Bob, Carol" value={players} onChange={e => setPlayers(e.target.value)} />
+
+          <label className="block text-sm text-muted mb-1">Max score</label>
+          <input className="w-full border p-2 rounded mb-4" type="number" value={maxScore} onChange={e => setMaxScore(Number(e.target.value))} />
+
+          <button className="w-full bg-accent text-white py-2 rounded font-semibold" onClick={createGame}>Start Game</button>
+        </div>
+      </aside>
     </div>
   );
 }
