@@ -1,12 +1,16 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY package*.json ./
-RUN npm install
+RUN pnpm install
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
 FROM node:20-alpine
 WORKDIR /app
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@latest --activate
 COPY --from=builder /app ./
 EXPOSE 3000
-CMD ["npm", "start"]
+CMD ["pnpm", "start"]
