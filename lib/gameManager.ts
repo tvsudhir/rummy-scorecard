@@ -6,15 +6,17 @@ import { saveGameState, loadGameState } from './storage';
 const GAME_DIR = path.join(process.cwd(), 'data');
 
 export const createGame = (name: string, players: string[], maxScore: number): Game => {
+  const trimmedName = name.trim();
+  const trimmedPlayers = players.map(p => p.trim());
   const game: Game = {
-    name,
+    name: trimmedName,
     createdAt: new Date().toISOString(),
-    players: players.map(p => ({ name: p, total: 0 })),
+    players: trimmedPlayers.map(p => ({ name: p, total: 0 })),
     rounds: [],
     maxScore,
     status: 'in-progress'
   };
-  saveGameState(name, game);
+  saveGameState(trimmedName, game);
   return game;
 };
 

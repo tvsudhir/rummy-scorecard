@@ -2,4 +2,7 @@
 /.next/*
 /data/*
 tsconfig.tsbuildinfo
-rummy-scorecard.tar
+rummy-*.tar
+
+# Ignore the public folder (e.g. uploads) so it's not tracked by git
+/public/*

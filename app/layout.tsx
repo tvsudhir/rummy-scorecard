@@ -12,16 +12,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen text-slate-900">
+      <body className="min-h-screen text-slate-900 bg-[var(--bg)]">
         <header className="app-header">
           <div className="container flex items-center justify-between py-4">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-accent rounded flex items-center justify-center text-white font-bold">R</div>
               <div>
                 <div className="text-lg font-semibold">Rummy Scorecard</div>
-                <div className="text-xs muted">Minimal · Modern · Fast</div>
               </div>
             </div>
+            <nav className="hidden md:flex items-center space-x-3">
+              <a href="/" className="text-sm text-muted hover:text-slate-900">Home</a>
+              <a href="#" className="text-sm text-muted hover:text-slate-900">About</a>
+            </nav>
           </div>
         </header>
         <main className="container py-8">{children}</main>

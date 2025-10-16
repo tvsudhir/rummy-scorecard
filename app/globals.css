@@ -1,3 +1,6 @@
+.btn + .btn, .btn + button, button + .btn, button + button {
+  margin-left: 0.5rem;
+}
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,6 +9,10 @@
   --bg: #f8fafc;
   --card: #ffffff;
   --muted: #94a3b8;
+  --accent: #2563eb;
+  --accent-600: #2563eb;
+  --accent-500: #3b82f6;
+  --danger: #ef4444;
 }
 
 html,body,#root {
@@ -25,9 +32,52 @@ body {
 
 .card {
   background: var(--card);
-  border: 1px solid #e6eef6;
-  border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(12,17,23,0.06);
+  border: 1px solid rgba(14,18,34,0.10);
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(12,17,23,0.10);
+  padding: 2rem 1.5rem;
+  margin-top: 2rem;
+  transition: box-shadow 0.2s;
+}
+.card:hover, .card:focus-within {
+  box-shadow: 0 12px 40px rgba(37,99,235,0.10);
+  border-color: var(--accent-500);
+}
+
+.modern-input {
+  background: #f1f5f9;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  transition: border 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+.modern-input:focus {
+  outline: none;
+  border-color: var(--accent-500);
+  box-shadow: 0 0 0 2px var(--accent-500, #3b82f6);
+  background: #fff;
 }
 
 .muted { color: var(--muted); }
+
+.container { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0.5rem 0.9rem; border-radius: 10px; font-weight: 600; cursor: pointer; }
+.btn-accent { background: linear-gradient(90deg,var(--accent-600),var(--accent-500)); color: white; box-shadow: 0 8px 20px rgba(59,130,246,0.18); cursor: pointer; }
+.btn-ghost { background: transparent; border: 1px solid rgba(14,18,34,0.06); color: inherit; cursor: pointer; }
+.btn-danger { background: var(--danger); color: white; cursor: pointer; }
+
+.player-card { padding: 18px; border-radius: 12px; background: linear-gradient(180deg,#ffffff, #fbfdff); border: 1px solid rgba(14,18,34,0.04); box-shadow: 0 6px 18px rgba(12,17,23,0.04); margin-top: 8px; margin-bottom: 8px; }
+
+/* table styles for rounds */
+.rounds-table { width: 100%; border-collapse: collapse; }
+.rounds-table th, .rounds-table td { padding: 10px 12px; border-bottom: 1px solid rgba(14,18,34,0.04); text-align: center; }
+.rounds-table thead th { background: linear-gradient(90deg,#fbfdff,#f8fafc); font-weight: 700; }
+.rounds-table tbody tr:hover { background: rgba(59,130,246,0.03); }
+
+.small-muted { color: var(--muted); font-size: 0.9rem; }
