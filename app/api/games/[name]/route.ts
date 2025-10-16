@@ -17,8 +17,8 @@ export async function GET(_: Request, { params }: { params: { name: string } }) 
 
 export async function PUT(request: Request, { params }: { params: { name: string } }) {
   try {
-    const { roundScores } = await request.json();
-    const updated = recordRound(params.name, roundScores);
+    const { roundIndex, scores, cards } = await request.json();
+    const updated = recordRound(params.name, roundIndex, scores, cards);
     return NextResponse.json(updated);
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? String(err) }, { status: 500 });

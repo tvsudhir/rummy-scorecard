@@ -20,17 +20,30 @@ export const createGame = (name: string, players: string[], maxScore: number): G
   return game;
 };
 
-export const recordRound = (name: string, roundScores: number[]): Game => {
+export const recordRound = (
+  name: string,
+  roundIndex: number | null,
+  scores: { [playerName: string]: number },
+  cards?: { [playerName: string]: { cards: string[]; scores: number[] } }
+): Game => {
   const game = loadGameState(name);
   if (!game) throw new Error('Game not found');
 
-  const updatedPlayers = game.players.map((p, idx) => ({
-    ...p,
-    total: p.total + (roundScores[idx] ?? 0)
+  let updatedRounds = [...game.rounds];
+  if (typeof roundIndex === 'number' && roundIndex >= 0 && roundIndex < game.rounds.length) {
+    // Update existing round
+    updatedRounds[roundIndex] = { scores, ...(cards && { cards }) };
+  } else {
+    // Add new round
+    updatedRounds.push({ scores, ...(cards && { cards }) });
+  }
+
+  const updatedPlayers = game.players.map(player => ({
+    ...player,
+    total: updatedRounds.reduce((sum, round) => sum + (round.scores[player.name] || 0), 0)
   }));
-  // build updated game using native operations to preserve typing
-  const updatedRounds = [...game.rounds, roundScores];
-  const losers = updatedPlayers.filter(p => p.total >= game.maxScore);
+
+  const losers = updatedPlayers.filter(p => p.total >= (game.maxScore || Infinity));
 
   let updatedGame: Game = {
     ...game,
@@ -46,11 +59,22 @@ export const recordRound = (name: string, roundScores: number[]): Game => {
   return updatedGame;
 };
 
-export const listGames = (): string[] => {
+export type GameSummary = { name: string; status: 'in-progress' | 'finished'; players: { name: string; total: number }[] };
+
+export const listGames = (): GameSummary[] => {
   const files = fs.readdirSync(GAME_DIR);
-  return files
-    .map((f: string) => f.replace('.json', ''))
-    .sort()
-    .reverse()
-    .slice(0, 5);
+  const summaries: GameSummary[] = files
+    .map((f: string) => {
+      try {
+        const game = loadGameState(f.replace('.json', ''));
+        if (!game) return null;
+        return { name: game.name, status: game.status, players: game.players } as GameSummary;
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean) as GameSummary[];
+
+  // latest first by filename (simple heuristic)
+  return summaries.sort((a, b) => (a.name < b.name ? 1 : -1)).slice(0, 5);
 };

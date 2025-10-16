@@ -1,173 +1,249 @@
-'use client';
+ 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { CardList, RoundScore, StatusBadge } from '@/app/components/Scoring';
+import { Game, Player, Round } from '@/lib/types';
 
-interface Player {
-  name: string;
-  total: number;
-}
-
-interface Game {
-  name: string;
-  players: Player[];
-  rounds: number[][];
-  status: string;
-  maxScore?: number;
+interface GameState {
+  game: Game | null;
+  selectedPlayer: string | null;
+  imageFile: File | null;
+  loading: boolean;
+  editingRound: number | null;
+  roundScores: { [playerName: string]: number };
+  cardDetails: {
+    [playerName: string]: { cards: string[]; scores: number[] };
+  };
 }
 
 export default function GamePage({ params }: { params: { name: string } }) {
-  const [game, setGame] = useState<Game | null>(null);
-  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [manualScores, setManualScores] = useState<number[]>([]);
-  const [manualMode, setManualMode] = useState(false);
+  const [state, setState] = useState<GameState>({
+    game: null,
+    selectedPlayer: null,
+    imageFile: null,
+    loading: false,
+    editingRound: null,
+    roundScores: {},
+    cardDetails: {},
+  });
 
   const gameName = params.name;
 
   useEffect(() => {
-    fetch(`/api/games/${gameName}`).then(res => res.json()).then(g => {
-      setGame(g);
-      setManualScores(g?.players?.map(() => 0) ?? []);
-    });
+    fetch(`/api/games/${gameName}`)
+      .then(res => res.json())
+      .then(game => setState(prev => ({ ...prev, game })));
   }, [gameName]);
-  const handleManualScoreChange = (idx: number, value: number | '') => {
-    setManualScores(scores => scores.map((s, i) => i === idx ? (value === '' ? 0 : value) : s));
+
+  const handleScoreChange = (playerName: string, value: number) => {
+    setState(prev => ({
+      ...prev,
+      roundScores: { ...prev.roundScores, [playerName]: value }
+    }));
   };
 
-  const handleManualSubmit = async () => {
-    if (!game) return;
-    setLoading(true);
-    const updated = await fetch(`/api/games/${gameName}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roundScores: manualScores })
-    }).then(r => r.json());
-    setGame(updated);
-    setManualScores(updated.players.map(() => 0));
-    setManualMode(false);
-    setLoading(false);
+  const handleSaveRound = async (roundIndex: number) => {
+    if (!state.game) return;
+    
+    setState(prev => ({ ...prev, loading: true }));
+
+    try {
+      const updated = await fetch(`/api/games/${gameName}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          roundIndex,
+          scores: state.roundScores,
+          cards: state.cardDetails
+        })
+      }).then(r => r.json());
+
+      setState(prev => ({
+        ...prev,
+        game: updated,
+        roundScores: {},
+        cardDetails: {},
+        editingRound: null,
+        loading: false
+      }));
+    } catch (error) {
+      console.error('Error saving round:', error);
+      alert('Failed to save round. Please try again.');
+      setState(prev => ({ ...prev, loading: false }));
+    }
   };
 
-  const handleUpload = async () => {
-    if (!imageFile || !selectedPlayer || !game) return;
-    setLoading(true);
-
-    const formData = new FormData();
-    formData.append('image', imageFile);
-    formData.append('player', selectedPlayer);
-
-    const res = await fetch('/api/upload', { method: 'POST', body: formData });
-    const { player, score } = await res.json();
-
-    const updated = await fetch(`/api/games/${gameName}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roundScores: game.players.map(p => p.name === player ? score : 0) })
-    }).then(r => r.json());
-
-    setGame(updated);
-    setSelectedPlayer(null);
-    setImageFile(null);
-    setLoading(false);
+  const handleAddRound = async () => {
+    if (!state.game) return;
+    // create an empty round with zero scores for all players
+    const scores: Record<string, number> = {};
+    state.game.players.forEach(p => { scores[p.name] = 0; });
+    setState(prev => ({ ...prev, loading: true }));
+    try {
+      const updated = await fetch(`/api/games/${gameName}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roundIndex: null, scores })
+      }).then(r => r.json());
+      setState(prev => ({ ...prev, game: updated, loading: false }));
+    } catch (err) {
+      console.error(err);
+      setState(prev => ({ ...prev, loading: false }));
+      alert('Failed to add round');
+    }
   };
 
-  if (!game) return <div className="p-6">Loading...</div>;
+  if (!state.game) return <div className="p-6">Loading...</div>;
+
+  const game = state.game!;
 
   return (
     <div className="p-6">
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold mb-1">{game.name}</h1>
-          <div className="small-muted">Status: {game.status} • Max score: {game.maxScore}</div>
+          <div className="text-sm text-gray-600"><StatusBadge status={game.status} /> <span className="ml-3">Max score: {game.maxScore}</span></div>
         </div>
-        <div className="flex gap-3">
-          <button className="btn btn-ghost" onClick={() => window.location.href = '/'}>Back</button>
-          <button className="btn btn-accent" onClick={() => setManualMode(m => !m)}>{manualMode ? 'Cancel' : 'Manual Entry'}</button>
+        <div className="flex items-center gap-3">
+          <button className="btn btn-primary" onClick={handleAddRound} disabled={state.loading}>Add Round</button>
+          <button className="btn btn-ghost" onClick={() => window.location.href = '/'}>
+            Back
+          </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-6">
-        {game.players.map((p, idx) => (
-          <div key={p.name} className={`player-card ${selectedPlayer === p.name ? 'ring-2 ring-offset-2 ring-indigo-200' : ''} p-6 my-3`}> 
+  {game.players.map((p) => (
+          <div key={p.name} className={`player-card ${state.selectedPlayer === p.name ? 'ring-2 ring-offset-2 ring-indigo-200' : ''} p-6 my-3`}> 
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-lg font-semibold">{p.name}</div>
-                <div className="small-muted">Total: {p.total}</div>
               </div>
-              <div className="flex flex-col items-end">
-                <button className="btn btn-ghost" onClick={() => setSelectedPlayer(p.name)}>Select</button>
-                {manualMode && (
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    className="modern-input w-24 mt-2 mb-0 px-2 py-1 text-right"
-                    value={manualScores[idx] ?? ''}
-                    onChange={e => {
-                      // Only allow digits, no leading zeros unless the value is zero
-                      let val = e.target.value.replace(/[^0-9]/g, '');
-                      if (val.length > 1 && val.startsWith('0')) val = val.replace(/^0+/, '');
-                      handleManualScoreChange(idx, val === '' ? '' : Number(val));
-                    }}
-                    placeholder="Score"
-                  />
-                )}
-              </div>
+              <button 
+                className={`btn ${state.selectedPlayer === p.name ? 'btn-accent' : 'btn-ghost'}`}
+                onClick={() => setState(prev => ({
+                  ...prev,
+                  selectedPlayer: prev.selectedPlayer === p.name ? null : p.name
+                }))}
+              >
+                {state.selectedPlayer === p.name ? 'Deselect' : 'Select'}
+              </button>
             </div>
+            {state.cardDetails[p.name] && (
+              <div className="mt-4">
+                <CardList 
+                  cards={state.cardDetails[p.name].cards} 
+                  scores={state.cardDetails[p.name].scores}
+                />
+              </div>
+            )}
+            <div className="mt-3 text-sm text-gray-600">Total: {p.total}</div>
           </div>
         ))}
       </div>
 
-      {manualMode && (
-        <div className="mt-6 flex gap-3">
-          <button className="btn btn-accent" onClick={handleManualSubmit} disabled={loading}>{loading ? 'Saving...' : 'Submit Manual Scores'}</button>
-        </div>
-      )}
-
-      {selectedPlayer && !manualMode && (
-        <div className="mt-6 border-t pt-4">
-          <h3 className="font-semibold mb-2">Upload for {selectedPlayer}</h3>
-          <label className="inline-block">
-            <input
-              type="file"
-              onChange={e => setImageFile(e.target.files?.[0] ?? null)}
-              className="hidden"
-            />
-            <span className="btn btn-ghost border border-accent-500 text-accent-600 hover:bg-accent-50 transition cursor-pointer align-middle">Choose File</span>
-          </label>
-          <button onClick={handleUpload} disabled={loading} className="ml-3 btn btn-accent align-middle">
-            {loading ? 'Processing...' : 'Submit Photo'}
-          </button>
-        </div>
-      )}
+      {/* Selection panel removed - image upload/processing disabled */}
 
       <div className="mt-8">
         <h3 className="font-bold text-lg mb-3">Rounds</h3>
-        {game.rounds.length === 0 && <p className="small-muted">No rounds yet.</p>}
-
-        {game.rounds.length > 0 && (
-          <div className="overflow-auto">
-            <table className="rounds-table">
-              <thead>
-                <tr>
-                  <th>Round</th>
-                  {game.players.map(p => <th key={p.name}>{p.name}</th>)}
-                </tr>
-              </thead>
-              <tbody>
-                {game.rounds.map((round, rIdx) => (
-                  <tr key={rIdx}>
-                    <td className="text-left">{rIdx + 1}</td>
-                    {game.players.map((_, pIdx) => (
-                      <td key={pIdx}>{round[pIdx] ?? 0}</td>
+        <div>
+          {game.rounds.length === 0 ? (
+            <p className="text-sm text-gray-600">No rounds yet.</p>
+          ) : (
+            <div className="overflow-auto">
+              <table className="min-w-full w-full table-fixed divide-y divide-gray-200 rounds-table">
+                <colgroup>
+                  <col style={{ width: '80px' }} />
+                  {game.players.map((_, idx) => (
+                    <col key={idx} />
+                  ))}
+                  <col style={{ width: '100px' }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th className="px-4 py-2">Round</th>
+                    {game.players.map(p => (
+                      <th key={p.name} className="px-4 py-2">{p.name}</th>
                     ))}
+                    <th className="px-4 py-2">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {state.game.rounds.map((round, rIdx) => {
+                    // compute totals before this round
+                    const totalsBefore: Record<string, number> = {};
+                    for (let i = 0; i < rIdx; i++) {
+                      const rr = state.game!.rounds[i];
+                      state.game!.players.forEach(p => {
+                        totalsBefore[p.name] = (totalsBefore[p.name] || 0) + (rr.scores[p.name] || 0);
+                      });
+                    }
+
+                    return (
+                      <tr key={rIdx} className={state.editingRound === rIdx ? 'bg-blue-50' : ''}>
+                        <td className="px-4 py-2">{rIdx + 1}</td>
+                        {game.players.map((player: Player) => {
+                          const eliminated = (totalsBefore[player.name] || 0) >= (game.maxScore || Infinity);
+                          const value = state.editingRound === rIdx ? (state.roundScores[player.name] ?? round.scores[player.name] ?? 0) : (round.scores[player.name] ?? 0);
+                          return (
+                            <td key={player.name} className="px-4 py-2">
+                              <RoundScore
+                                isEditing={state.editingRound === rIdx}
+                                value={value}
+                                disabled={eliminated}
+                                onChange={(v: number) => handleScoreChange(player.name, v)}
+                              />
+                            </td>
+                          );
+                        })}
+                        <td className="px-4 py-2">
+                          {state.editingRound === rIdx ? (
+                            <button 
+                              className="btn btn-sm btn-accent"
+                              onClick={() => handleSaveRound(rIdx)}
+                              disabled={state.loading}
+                            >
+                              {state.loading ? 'Saving...' : 'Save'}
+                            </button>
+                          ) : (
+                            <button 
+                              className="btn btn-sm btn-ghost"
+                              onClick={() => {
+                                const playerScores: Record<string, number> = {};
+                                if (game) {
+                                  game.players.forEach((p: Player) => {
+                                    playerScores[p.name] = round.scores[p.name] ?? 0;
+                                  });
+                                }
+                                setState(prev => ({
+                                  ...prev,
+                                  editingRound: rIdx,
+                                  roundScores: playerScores,
+                                  cardDetails: round.cards ?? {}
+                                }));
+                              }}
+                            >
+                              Edit
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="font-semibold bg-gray-50">
+                    <td className="px-4 py-2">Totals</td>
+                    {game.players.map(p => (
+                      <td key={p.name} className="px-4 py-2">{p.total}</td>
+                    ))}
+                    <td className="px-4 py-2" />
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,9 +1,12 @@
  'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { StatusBadge } from '@/app/components/Scoring';
+
+type GameSummary = { name: string; status: string; players: { name: string; total: number }[] };
 
 export default function Home() {
-  const [games, setGames] = useState<string[]>([]);
+  const [games, setGames] = useState<GameSummary[]>([]);
   const [name, setName] = useState('');
   const [players, setPlayers] = useState('');
   const [maxScore, setMaxScore] = useState(200);
@@ -34,14 +37,15 @@ export default function Home() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {games.map(g => {
-                  const trimmedG = g.trim();
+                  const trimmedG = g.name.trim();
                   return (
                     <div key={trimmedG} className="player-card">
                       <div className="flex items-center justify-between">
                         <Link href={`/game/${trimmedG}`} className="text-lg font-semibold text-slate-900">{trimmedG}</Link>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-4">
+                          <StatusBadge status={g.status} />
                           <button
-                            className="btn btn-ghost text-sm"
+                            className="btn btn-ghost text-sm ml-3"
                             title="Open"
                             onClick={() => { window.location.href = `/game/${trimmedG}` }}
                           >Open</button>
@@ -52,13 +56,13 @@ export default function Home() {
                               e.preventDefault();
                               if (confirm(`Delete game '${trimmedG}'?`)) {
                                 await fetch(`/api/games/${trimmedG}`, { method: 'DELETE' });
-                                setGames(games => games.filter(name => name.trim() !== trimmedG));
+                                setGames(games => games.filter(x => x.name.trim() !== trimmedG));
                               }
                             }}
                           >Delete</button>
                         </div>
                       </div>
-                      <div className="text-sm muted mt-2">Last played: —</div>
+                      <div className="text-sm muted mt-2">Players: {g.players.map(p => p.name).join(', ')}</div>
                     </div>
                   );
                 })}

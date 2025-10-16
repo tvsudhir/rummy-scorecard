@@ -3,7 +3,10 @@ export interface Player {
   total: number;
 }
 
-export type Round = number[];
+export interface Round {
+  scores: { [playerName: string]: number };
+  cards?: { [playerName: string]: { cards: string[]; scores: number[] } };
+}
 
 export interface Game {
   name: string;
